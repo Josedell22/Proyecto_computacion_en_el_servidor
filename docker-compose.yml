@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: studymatch-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studymatch
+      POSTGRES_PASSWORD: studymatch
+      POSTGRES_DB: studymatch
+    ports:
+      - "5433:5432"
+    volumes:
+      - studymatch_pg:/var/lib/postgresql/data
+
+volumes:
+  studymatch_pg:
