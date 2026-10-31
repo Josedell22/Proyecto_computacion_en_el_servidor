@@ -15,7 +15,7 @@ app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 app.get("/api/health", (_req, res) => res.json({ ok: true, name: "StudyMatch" }));
 
 app.use("/api/auth", require("./routes/auth"));
-app.use("/api/subjects", requireAuth, require("./routes/subjects"));
+app.use("/api/subjects", requireAuth, loadUser, require("./routes/subjects"));
 app.use("/api/profile", requireAuth, loadUser, require("./routes/profile"));
 app.use("/api/tutors", requireAuth, loadUser, require("./routes/tutors"));
 app.use("/api/availability", requireAuth, loadUser, require("./routes/availability"));
@@ -23,7 +23,7 @@ app.use("/api/requests", requireAuth, loadUser, require("./routes/requests"));
 app.use("/api/sessions", requireAuth, loadUser, require("./routes/sessions"));
 app.use("/api/history", requireAuth, loadUser, require("./routes/history"));
 app.use("/api/publications", requireAuth, loadUser, require("./routes/publications"));
-app.use("/api/admin", requireAuth, requireAdmin, require("./routes/admin"));
+app.use("/api/admin", requireAuth, loadUser, requireAdmin, require("./routes/admin"));
 
 app.use((err, _req, res, _next) => {
   console.error(err);

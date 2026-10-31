@@ -51,7 +51,8 @@ router.post("/login", async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ message: "Correo y contraseña son obligatorios." });
   }
-  const result = await query("SELECT * FROM users WHERE LOWER(email)=LOWER($1)", [email]);
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const result = await query("SELECT * FROM users WHERE LOWER(email)=LOWER($1)", [normalizedEmail]);
   const user = result.rows[0];
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     return res.status(401).json({ message: "Los datos de acceso no son válidos." });

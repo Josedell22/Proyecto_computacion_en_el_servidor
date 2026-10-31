@@ -1,5 +1,5 @@
 const Router = require("../router");
-const { query } = require("../db");
+const { pool, query } = require("../db");
 const { publicUser, profileStatus } = require("../utils");
 
 const router = Router();
@@ -52,18 +52,29 @@ router.put("/subjects", async (req, res) => {
   if (subjectIds.some((id) => Number.isNaN(id))) {
     return res.status(400).json({ message: "Las materias seleccionadas no son válidas." });
   }
-  if (subjectIds.length) {
-    const found = await query(
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    if (subjectIds.length) {
+      const found = await client.query(
       "SELECT id FROM subjects WHERE id = ANY($1::int[]) AND is_active=TRUE",
       [subjectIds]
-    );
-    if (found.rows.length !== subjectIds.length) {
-      return res.status(400).json({ message: "Solo puede seleccionar materias activas existentes." });
+      );
+      if (found.rows.length !== subjectIds.length) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Solo puede seleccionar materias activas existentes." });
+      }
     }
-  }
-  await query("DELETE FROM student_subjects WHERE user_id=$1", [req.user.id]);
-  for (const id of subjectIds) {
-    await query("INSERT INTO student_subjects (user_id, subject_id) VALUES ($1, $2)", [req.user.id, id]);
+    await client.query("DELETE FROM student_subjects WHERE user_id=$1", [req.user.id]);
+    for (const id of subjectIds) {
+      await client.query("INSERT INTO student_subjects (user_id, subject_id) VALUES ($1, $2)", [req.user.id, id]);
+    }
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
   }
   res.json(await withProfile(req.user.id));
 });

@@ -51,11 +51,27 @@ router.put("/:id", requireAdmin, async (req, res) => {
   const nextDesc = description !== undefined ? description : current.rows[0].description;
   const nextActive = isActive !== undefined ? Boolean(isActive) : current.rows[0].is_active;
   if (!nextName) return res.status(400).json({ message: "El nombre de la materia es obligatorio." });
-  const updated = await query(
-    "UPDATE subjects SET name=$1, description=$2, is_active=$3 WHERE id=$4 RETURNING *",
-    [nextName, nextDesc, nextActive, req.params.id]
+  try {
+    const updated = await query(
+      "UPDATE subjects SET name=$1, description=$2, is_active=$3 WHERE id=$4 RETURNING *",
+      [nextName, nextDesc == null ? null : String(nextDesc).trim(), nextActive, req.params.id]
+    );
+    res.json({ subject: updated.rows[0] });
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(409).json({ message: "Ya existe una materia con ese nombre." });
+    }
+    throw err;
+  }
+});
+
+router.delete("/:id", requireAdmin, async (req, res) => {
+  const deleted = await query(
+    "UPDATE subjects SET is_active=FALSE WHERE id=$1 AND is_active=TRUE RETURNING *",
+    [req.params.id]
   );
-  res.json({ subject: updated.rows[0] });
+  if (!deleted.rows[0]) return res.status(404).json({ message: "Materia no encontrada o ya está desactivada." });
+  res.json({ subject: deleted.rows[0], message: "Materia desactivada." });
 });
 
 module.exports = router;
