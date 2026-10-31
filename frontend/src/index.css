@@ -1,3 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --green: #0f6b3c;
   --green-dark: #0a4d2b;
@@ -9,14 +15,14 @@
   --white: #ffffff;
   --danger: #b42318;
   --shadow: 0 16px 40px rgba(15, 107, 60, 0.08);
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   color: var(--ink);
   background: var(--cream);
 }
 
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; min-height: 100%; }
-body { background: radial-gradient(circle at top right, #eaf4ec, var(--cream) 40%); }
+body { font-family: "Plus Jakarta Sans", sans-serif; background: radial-gradient(circle at top right, #eaf4ec, var(--cream) 40%); }
 a { color: var(--green); text-decoration: none; }
 button, input, select, textarea { font: inherit; }
 
@@ -31,12 +37,12 @@ button, input, select, textarea { font: inherit; }
   top: 0;
   z-index: 10;
 }
-.brand { font-weight: 800; letter-spacing: 0.04em; color: white; font-size: 1.2rem; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: 0.04em; color: white; font-size: 1.2rem; }
 .nav { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
 .nav a { color: #dceee3; font-size: 0.92rem; }
 .nav a.active, .nav a:hover { color: #f5d76e; }
 .user-chip { display: flex; gap: 10px; align-items: center; }
-.ghost { background: transparent; border: 1px solid #dceee3; color: white; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.ghost { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid #dceee3; color: white; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
 
 .page { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
 .hero {
@@ -149,4 +155,11 @@ th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
 @media (max-width: 800px) {
   .hero { grid-template-columns: 1fr; padding: 28px; }
   .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+
+@media (max-width: 640px) {
+  .topbar { padding: 14px 20px; }
+  .nav { gap: 10px; }
+  .nav a { font-size: 0.85rem; }
+  .user-name { display: none; }
 }
