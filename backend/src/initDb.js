@@ -84,6 +84,39 @@ async function init() {
          ON CONFLICT DO NOTHING`,
         [laura.rows[0].id, prog.rows[0].id]
       );
+      await pool.query(
+        `INSERT INTO availability (user_id, weekday, start_time, end_time)
+         SELECT $1, 3, '10:00', '12:00'
+         WHERE NOT EXISTS (SELECT 1 FROM availability WHERE user_id=$1 AND weekday=3)`,
+        [laura.rows[0].id]
+      );
+    }
+
+    const carlos = await pool.query("SELECT id FROM users WHERE email=$1", ["carlos@usco.edu.co"]);
+    if (ana.rows[0] && carlos.rows[0] && calc.rows[0]) {
+      const existingSession = await pool.query(
+        "SELECT id FROM sessions WHERE advisor_id=$1 AND student_id=$2 LIMIT 1",
+        [ana.rows[0].id, carlos.rows[0].id]
+      );
+      if (!existingSession.rows[0]) {
+        const request = await pool.query(
+          `INSERT INTO tutoring_requests (student_id, advisor_id, subject_id, description, preferred_at, status)
+           VALUES ($1, $2, $3, 'Refuerzo de matrices y determinantes.', NOW() - INTERVAL '7 days', 'finished')
+           RETURNING id`,
+          [carlos.rows[0].id, ana.rows[0].id, calc.rows[0].id]
+        );
+        const session = await pool.query(
+          `INSERT INTO sessions (request_id, student_id, advisor_id, subject_id, scheduled_at, status)
+           VALUES ($1, $2, $3, $4, NOW() - INTERVAL '6 days', 'finished')
+           RETURNING id`,
+          [request.rows[0].id, carlos.rows[0].id, ana.rows[0].id, calc.rows[0].id]
+        );
+        await pool.query(
+          `INSERT INTO ratings (session_id, student_id, stars, comment)
+           VALUES ($1, $2, 5, 'Explica con claridad y paciencia.')`,
+          [session.rows[0].id, carlos.rows[0].id]
+        );
+      }
     }
   }
 

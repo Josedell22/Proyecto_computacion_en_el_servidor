@@ -58,10 +58,12 @@ No publiques archivos `.env` ni compartas sus valores.
 ## Funcionalidades del MVP
 
 - Registro e inicio de sesión (JWT + contraseñas con bcrypt)
-- Perfil académico y materias dominadas
-- Catálogo de materias (CRUD para administrador)
+- Consultar y actualizar perfiles académicos
+- Consultar materias; crear, modificar y desactivar materias (administrador)
+- Registrar las materias que domina cada estudiante
+- Buscar asesores por materia y listar estudiantes disponibles
+- Consultar perfiles académicos, horarios de disponibilidad y valoraciones
 - Solicitudes de ayuda abiertas y solicitudes directas a un asesor
-- Búsqueda de asesores por materia, disponibilidad y valoración promedio
 - Aceptar/rechazar solicitudes y generación automática de sesión
 - Finalización y valoración 1-5
 - Historial con filtros

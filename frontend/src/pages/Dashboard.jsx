@@ -38,6 +38,7 @@ export default function Dashboard() {
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Link className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700" to="/solicitudes">Crear solicitud <ArrowRight size={17} /></Link>
         <Link className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600" to="/asesores">Buscar asesores</Link>
+        <Link className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600" to="/disponibilidad">Mis horarios</Link>
         <Link className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600" to="/publicaciones/nueva">Nueva publicación</Link>
       </div>
     </div>

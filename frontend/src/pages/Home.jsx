@@ -15,10 +15,17 @@ export default function Home() {
     },
     {
       title: "Asesores",
-      description: "Busca asesores por materia y consulta su valoración promedio.",
+      description: "Lista estudiantes disponibles, busca por materia y consulta valoraciones.",
       href: "/asesores",
       icon: Users,
       iconClass: "bg-indigo-50 text-indigo-600",
+    },
+    {
+      title: "Materias",
+      description: "Consulta el catálogo académico. El administrador puede crear, editar y desactivar.",
+      href: "/materias",
+      icon: BookMarked,
+      iconClass: "bg-amber-50 text-amber-600",
     },
     {
       title: "Publicaciones",
@@ -76,7 +83,7 @@ export default function Home() {
             <h2 className="mt-1 text-2xl font-bold text-slate-900">Accesos principales</h2>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {accessCards.map(({ title, description, href, icon: Icon, iconClass }) => (
             <Link className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl" key={title} to={href}>
               <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

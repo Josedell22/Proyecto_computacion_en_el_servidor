@@ -103,7 +103,7 @@ export default function Subjects() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Catálogo académico</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Materias</h1>
-          <p className="mt-2 text-slate-600">Administra las asignaturas disponibles para la comunidad.</p>
+          <p className="mt-2 text-slate-600">{user.role === "admin" ? "Crea, modifica o desactiva las asignaturas disponibles para la comunidad." : "Consulta las asignaturas activas en las que puedes pedir o ofrecer asesoría."}</p>
         </div>
         {user.role === "admin" && <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white shadow-sm transition hover:bg-indigo-700" onClick={openCreate} type="button"><Plus size={18} /> Nueva materia</button>}
       </div>

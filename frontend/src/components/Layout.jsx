@@ -12,11 +12,12 @@ export default function Layout() {
     ["/", "Inicio"],
     ["/solicitudes", "Solicitudes"],
     ["/asesores", "Asesores"],
+    ["/materias", "Materias"],
+    ["/disponibilidad", "Horarios"],
     ["/publicaciones", "Publicaciones"],
     ["/perfil", "Perfil"],
   ];
   if (user?.role === "admin") {
-    links.push(["/materias", "Materias"]);
     links.push(["/admin", "Administración"]);
   }
 
