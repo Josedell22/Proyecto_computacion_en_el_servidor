@@ -45,7 +45,7 @@ export default function Admin() {
   return (
     <div className="space-y-6">
       <div><p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Control de plataforma</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Administración</h1><p className="mt-2 text-slate-600">Gestiona usuarios, solicitudes y reportes de contenido.</p></div>
-      {error && <div className="alert">{error}</div>}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
       <div className="flex w-full gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 sm:w-fit">
         <button className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold ${tab === "users" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`} onClick={() => setTab("users")} type="button"><Users size={16} /> Estudiantes</button>
         <button className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold ${tab === "requests" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"}`} onClick={() => setTab("requests")} type="button"><ShieldCheck size={16} /> Solicitudes</button>

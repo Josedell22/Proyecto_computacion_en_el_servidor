@@ -20,14 +20,14 @@ import Admin from "./pages/Admin.jsx";
 
 function Private({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="page">Cargando...</div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-medium text-slate-500">Cargando...</div>;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
 function Guest({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="page">Cargando...</div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-medium text-slate-500">Cargando...</div>;
   if (user) return <Navigate to="/panel" replace />;
   return children;
 }

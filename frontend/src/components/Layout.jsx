@@ -15,7 +15,10 @@ export default function Layout() {
     ["/publicaciones", "Publicaciones"],
     ["/perfil", "Perfil"],
   ];
-  if (user?.role === "admin") links.push(["/admin", "Administración"]);
+  if (user?.role === "admin") {
+    links.push(["/materias", "Materias"]);
+    links.push(["/admin", "Administración"]);
+  }
 
   return (
     <>

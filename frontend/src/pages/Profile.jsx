@@ -65,17 +65,17 @@ export default function Profile() {
   return (
     <div className="space-y-6">
       <div><p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Tu identidad académica</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Perfil</h1><p className="mt-2 text-slate-600">Mantén actualizada tu información para conectar mejor con la comunidad.</p></div>
-      {error && <div className="alert">{error}</div>}
-      {message && <div className="ok">{message}</div>}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+      {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{message}</div>}
       <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-800">{data.profile.message}</div>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <form className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-5" onSubmit={saveProfile}>
           <div className="mb-6 flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><UserRound size={21} /></span><div><h2 className="font-bold text-slate-900">Datos personales</h2><p className="text-sm text-slate-500">Información básica y académica</p></div></div>
           <div className="space-y-4">
-            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Nombre</label><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Programa académico</label><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} /></div>
-            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Semestre</label><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" type="number" min="1" max="20" value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })} /></div>
-            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Descripción personal</label><textarea className="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} /></div>
+          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Nombre</label><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Programa académico</label><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} /></div>
+            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Semestre</label><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" type="number" min="1" max="20" value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })} /></div>
+            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Descripción personal</label><textarea className="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} /></div>
           </div>
           <button className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white hover:bg-indigo-700" type="submit"><Save size={17} /> Guardar perfil</button>
         </form>
