@@ -1,8 +1,14 @@
 const DEVELOPMENT_JWT_SECRET = "cambia-esta-clave-en-produccion";
 
+function resolveClientOrigin(env = process.env) {
+  const raw = env.CLIENT_ORIGIN || env.RENDER_EXTERNAL_URL || "";
+  return raw.replace(/\/$/, "") || undefined;
+}
+
 function validateApiConfig(env = process.env) {
   const missing = ["DATABASE_URL", "JWT_SECRET"].filter((key) => !env[key]);
-  if (env.NODE_ENV === "production" && !env.CLIENT_ORIGIN) {
+  const clientOriginValue = resolveClientOrigin(env);
+  if (env.NODE_ENV === "production" && !clientOriginValue) {
     missing.push("CLIENT_ORIGIN");
   }
   if (missing.length) {
@@ -15,13 +21,13 @@ function validateApiConfig(env = process.env) {
     }
     let clientOrigin;
     try {
-      clientOrigin = new URL(env.CLIENT_ORIGIN);
+      clientOrigin = new URL(clientOriginValue);
     } catch {
       throw new Error("En producción, CLIENT_ORIGIN debe ser un origen HTTP o HTTPS válido.");
     }
     if (
       !["http:", "https:"].includes(clientOrigin.protocol) ||
-      clientOrigin.origin !== env.CLIENT_ORIGIN
+      clientOrigin.origin !== clientOriginValue
     ) {
       throw new Error("En producción, CLIENT_ORIGIN debe contener solo el origen, sin rutas ni parámetros.");
     }
@@ -42,4 +48,4 @@ function validateAdminSeedConfig(env = process.env) {
   }
 }
 
-module.exports = { validateApiConfig, validateAdminSeedConfig };
+module.exports = { resolveClientOrigin, validateApiConfig, validateAdminSeedConfig };

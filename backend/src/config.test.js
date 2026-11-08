@@ -48,6 +48,14 @@ test("rejects development signing secrets and local origins in production", () =
     /solo el origen/
   );
   assert.doesNotThrow(() => validateApiConfig({ ...base, JWT_SECRET: "a".repeat(32) }));
+  assert.doesNotThrow(() =>
+    validateApiConfig({
+      DATABASE_URL: base.DATABASE_URL,
+      JWT_SECRET: "a".repeat(32),
+      NODE_ENV: "production",
+      RENDER_EXTERNAL_URL: "https://studymatch.onrender.com",
+    })
+  );
 });
 
 test("requires custom administrator credentials for production seeding", () => {

@@ -1,7 +1,11 @@
 const { Pool } = require("pg");
 
+const connectionString = process.env.DATABASE_URL;
+const useSsl = process.env.RENDER === "true" || /sslmode=require/i.test(connectionString || "");
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
+  ssl: useSsl ? { rejectUnauthorized: false } : undefined,
 });
 
 async function query(text, params) {
