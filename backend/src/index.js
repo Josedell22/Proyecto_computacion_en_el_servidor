@@ -26,11 +26,19 @@ app.use("/api/publications", requireAuth, loadUser, require("./routes/publicatio
 app.use("/api/admin", requireAuth, loadUser, requireAdmin, require("./routes/admin"));
 
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ message: "No se pudo completar la operación. Intente de nuevo." });
+  if (!err.status || err.status >= 500) console.error(err);
+  const status = Number.isInteger(err.status) && err.status >= 400 && err.status <= 599 ? err.status : 500;
+  res.status(status).json({
+    message: status === 500
+      ? "No se pudo completar la operación. Intente de nuevo."
+      : err.message,
+  });
 });
 
-const port = Number(process.env.PORT) || 4000;
-app.listen(port, () => {
-  console.log(`StudyMatch API en http://localhost:${port}`);
-});
+if (require.main === module) {
+  const port = Number(process.env.PORT) || 4000;
+  app.listen(port, () => {
+    console.log(`StudyMatch API en http://localhost:${port}`);
+  });
+}
+module.exports = app;

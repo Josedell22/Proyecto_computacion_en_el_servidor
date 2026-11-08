@@ -1,5 +1,6 @@
 const Router = require("../router");
-const { query } = require("../db");
+const { query, withTransaction } = require("../db");
+const { parsePositiveId } = require("../academicValidation");
 
 const router = Router();
 
@@ -27,49 +28,77 @@ router.get("/", async (req, res) => {
 });
 
 router.patch("/:id/finish", async (req, res) => {
-  const current = await query("SELECT * FROM sessions WHERE id=$1", [req.params.id]);
-  const session = current.rows[0];
-  if (!session) return res.status(404).json({ message: "Sesión no encontrada." });
-  if (session.student_id !== req.user.id && session.advisor_id !== req.user.id) {
-    return res.status(403).json({ message: "Solo los participantes pueden finalizar la sesión." });
-  }
-  if (session.status === "finished") {
-    return res.json({
-      session: (await query(`${SESSION_SELECT} WHERE s.id=$1`, [session.id])).rows[0],
-    });
-  }
-  await query("UPDATE sessions SET status='finished' WHERE id=$1", [session.id]);
-  await query("UPDATE tutoring_requests SET status='finished' WHERE id=$1", [session.request_id]);
+  const sessionId = parsePositiveId(req.params.id);
+  if (!sessionId) return res.status(400).json({ message: "La sesión indicada no es válida." });
+  await withTransaction(async (client) => {
+    const current = await client.query("SELECT * FROM sessions WHERE id=$1 FOR UPDATE", [sessionId]);
+    const session = current.rows[0];
+    if (!session) {
+      const error = new Error("Sesión no encontrada.");
+      error.status = 404;
+      throw error;
+    }
+    if (session.student_id !== req.user.id && session.advisor_id !== req.user.id) {
+      const error = new Error("Solo los participantes pueden finalizar la sesión.");
+      error.status = 403;
+      throw error;
+    }
+    if (session.status !== "finished") {
+      await client.query("UPDATE sessions SET status='finished' WHERE id=$1", [session.id]);
+      await client.query("UPDATE tutoring_requests SET status='finished' WHERE id=$1", [session.request_id]);
+    }
+  });
   res.json({
-    session: (await query(`${SESSION_SELECT} WHERE s.id=$1`, [session.id])).rows[0],
+    session: (await query(`${SESSION_SELECT} WHERE s.id=$1`, [sessionId])).rows[0],
   });
 });
 
 router.post("/:id/rating", async (req, res) => {
-  const stars = Number(req.body?.stars);
-  const comment = req.body?.comment ? String(req.body.comment).trim() : null;
+  const sessionId = parsePositiveId(req.params.id);
+  const rawStars = req.body?.stars;
+  const stars = ["number", "string"].includes(typeof rawStars) ? Number(rawStars) : NaN;
+  if (req.body?.comment != null && typeof req.body.comment !== "string") {
+    return res.status(400).json({ message: "El comentario debe ser texto." });
+  }
+  const comment = req.body?.comment?.trim() || null;
+  if (!sessionId) return res.status(400).json({ message: "La sesión indicada no es válida." });
   if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
     return res.status(400).json({ message: "La valoración debe ser un valor entre 1 y 5 estrellas." });
   }
-  const current = await query("SELECT * FROM sessions WHERE id=$1", [req.params.id]);
-  const session = current.rows[0];
-  if (!session) return res.status(404).json({ message: "Sesión no encontrada." });
-  if (session.student_id !== req.user.id) {
-    return res.status(403).json({ message: "Solo el estudiante asesorado puede valorar esta sesión." });
+  if (comment && comment.length > 800) {
+    return res.status(400).json({ message: "El comentario no puede superar los 800 caracteres." });
   }
-  if (session.status !== "finished") {
-    return res.status(400).json({ message: "La valoración solo puede realizarse después de finalizar la sesión." });
-  }
-  const existing = await query("SELECT id FROM ratings WHERE session_id=$1", [session.id]);
-  if (existing.rows[0]) {
-    return res.status(409).json({ message: "Esta sesión ya fue valorada." });
-  }
-  await query(
-    "INSERT INTO ratings (session_id, student_id, stars, comment) VALUES ($1,$2,$3,$4)",
-    [session.id, req.user.id, stars, comment]
-  );
+  await withTransaction(async (client) => {
+    const current = await client.query("SELECT * FROM sessions WHERE id=$1 FOR UPDATE", [sessionId]);
+    const session = current.rows[0];
+    if (!session) {
+      const error = new Error("Sesión no encontrada.");
+      error.status = 404;
+      throw error;
+    }
+    if (session.student_id !== req.user.id) {
+      const error = new Error("Solo el estudiante asesorado puede valorar esta sesión.");
+      error.status = 403;
+      throw error;
+    }
+    if (session.status !== "finished") {
+      const error = new Error("La valoración solo puede realizarse después de finalizar la sesión.");
+      error.status = 400;
+      throw error;
+    }
+    const existing = await client.query("SELECT id FROM ratings WHERE session_id=$1", [session.id]);
+    if (existing.rows[0]) {
+      const error = new Error("Esta sesión ya fue valorada.");
+      error.status = 409;
+      throw error;
+    }
+    await client.query(
+      "INSERT INTO ratings (session_id, student_id, stars, comment) VALUES ($1,$2,$3,$4)",
+      [session.id, req.user.id, stars, comment]
+    );
+  });
   res.status(201).json({
-    session: (await query(`${SESSION_SELECT} WHERE s.id=$1`, [session.id])).rows[0],
+    session: (await query(`${SESSION_SELECT} WHERE s.id=$1`, [sessionId])).rows[0],
   });
 });
 

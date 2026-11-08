@@ -57,6 +57,9 @@ No publiques archivos `.env` ni compartas sus valores.
 
 ## Funcionalidades del MVP
 
+La guía de entrega, reglas y pruebas de solicitudes, disponibilidad, sesiones, valoraciones e historial está en [Entrega de módulos 4–6](docs/entrega-modulos-4-6.md).
+Para actualizar una base existente sin cargar datos demo, ejecute `npm run db:migrate` desde `backend`.
+
 - Registro e inicio de sesión (JWT + contraseñas con bcrypt)
 - Consultar y actualizar perfiles académicos
 - Consultar materias; crear, modificar y desactivar materias (administrador)

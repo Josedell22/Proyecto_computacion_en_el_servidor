@@ -1,116 +1,77 @@
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
+import { CalendarClock, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { api, formatTime } from "../api/client";
-import { CalendarClock, Plus, Trash2 } from "lucide-react";
+import { useResource } from "../hooks/useResource";
+import { ConfirmDialog, Empty, Loading, Notice, PageHeading, panel, primaryButton, secondaryButton } from "../components/AcademicUI";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const blank = { weekday: "1", startTime: "14:00", endTime: "16:00" };
 
 export default function Availability() {
-  const [slots, setSlots] = useState([]);
-  const [form, setForm] = useState({ weekday: "1", startTime: "14:00", endTime: "16:00" });
+  const resource = useResource("/api/availability");
+  const [form, setForm] = useState(blank);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const formRef = useRef(null);
 
-  async function load() {
-    const data = await api("/api/availability");
-    setSlots(data.availability);
-  }
-
-  useEffect(() => {
-    load().catch((err) => setError(err.message));
-  }, []);
-
-  async function create(e) {
-    e.preventDefault();
-    setError("");
-    setMessage("");
+  async function save(event) {
+    event.preventDefault();
+    if (busy) return;
+    setError(""); setMessage("");
+    if (form.endTime <= form.startTime) { setError("La hora de fin debe ser posterior a la de inicio."); return; }
+    setBusy(true);
     try {
-      await api("/api/availability", { method: "POST", body: JSON.stringify(form) });
-      setMessage("Horario agregado.");
-      await load();
-    } catch (err) {
-      setError(err.message);
-    }
+      await api("/api/availability" + (editing ? "/" + editing : ""), { method: editing ? "PUT" : "POST", body: JSON.stringify(form) });
+      setMessage(editing ? "Horario actualizado." : "Horario agregado.");
+      setEditing(null); setForm(blank); resource.reload();
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
   }
 
-  async function remove(id) {
-    setError("");
-    setMessage("");
+  async function remove() {
+    if (busy) return;
+    setBusy(true); setError(""); setMessage("");
     try {
-      await api(`/api/availability/${id}`, { method: "DELETE" });
-      setMessage("Horario eliminado.");
-      await load();
-    } catch (err) {
-      setError(err.message);
-    }
+      await api("/api/availability/" + deleting.id, { method: "DELETE" });
+      if (editing === deleting.id) { setEditing(null); setForm(blank); }
+      setDeleting(null); setMessage("Horario eliminado."); resource.reload();
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Tu agenda</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Horarios de disponibilidad</h1>
-        <p className="mt-2 text-slate-600">Indica los días y franjas en los que puedes ofrecer asesorías. Otros estudiantes podrán consultarlos en tu perfil.</p>
-      </div>
-      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
-      {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{message}</div>}
+  function edit(slot) {
+    setEditing(slot.id); setError(""); setMessage("");
+    setForm({ weekday: String(slot.weekday), startTime: formatTime(slot.start_time), endTime: formatTime(slot.end_time) });
+    formRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    formRef.current.querySelector("select").focus({ preventScroll: true });
+  }
 
-      <form className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end" onSubmit={create}>
-        <div className="flex-1">
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Día</label>
-          <select
-            className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-            value={form.weekday}
-            onChange={(e) => setForm({ ...form, weekday: Number(e.target.value) })}
-          >
-            {DAYS.map((d, i) => (
-              <option key={d} value={i}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Inicio</label>
-          <input
-            className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-            type="time"
-            value={form.startTime}
-            onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Fin</label>
-          <input
-            className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-            type="time"
-            value={form.endTime}
-            onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-          />
-        </div>
-        <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white hover:bg-indigo-700" type="submit">
-          <Plus size={17} /> Agregar
-        </button>
-      </form>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {slots.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 md:col-span-2 lg:col-span-3">
-            <CalendarClock className="mx-auto mb-3 text-slate-400" size={30} />
-            Aún no has registrado horarios.
-          </div>
-        )}
-        {slots.map((s) => (
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" key={s.id}>
-            <h3 className="text-lg font-bold text-slate-900">{s.weekdayLabel}</h3>
-            <p className="mt-1 text-slate-600">
-              {formatTime(s.start_time)} - {formatTime(s.end_time)}
-            </p>
-            <button className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100" onClick={() => remove(s.id)} type="button">
-              <Trash2 size={15} /> Eliminar
-            </button>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="space-y-6">
+    <PageHeading eyebrow="Tu agenda" title="Horarios de disponibilidad" description="Comparte las franjas semanales en las que puedes ofrecer asesorías. Los horarios se muestran en tu perfil." />
+    <Notice error={!deleting && (error || resource.error)} message={message} retry={resource.error ? resource.reload : undefined} />
+    <form ref={formRef} className={panel} onSubmit={save}>
+      <div className="mb-5 flex items-center gap-3"><span className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600"><CalendarClock size={22} /></span><div><h2 className="font-bold text-slate-900">{editing ? "Editar horario" : "Agregar disponibilidad"}</h2><p className="mt-1 text-xs text-slate-500">Franjas semanales · Hora de Colombia (UTC−5)</p></div></div>
+      <fieldset disabled={busy} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div><label htmlFor="slot-day">Día de la semana</label><select id="slot-day" value={form.weekday} onChange={(e) => setForm({ ...form, weekday: e.target.value })}>{DAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></div>
+        <div><label htmlFor="slot-start">Hora de inicio</label><input id="slot-start" type="time" required value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} /></div>
+        <div><label htmlFor="slot-end">Hora de fin</label><input id="slot-end" type="time" required value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} /></div>
+        <div className="flex flex-wrap gap-2 sm:col-span-3"><button type="submit" className={primaryButton}>{editing ? <Save size={16} /> : <Plus size={16} />}{busy ? "Guardando..." : editing ? "Guardar cambios" : "Agregar horario"}</button>{editing && <button className={secondaryButton} type="button" onClick={() => { setEditing(null); setForm(blank); setError(""); }}>Cancelar edición</button>}</div>
+      </fieldset>
+    </form>
+    <div className="flex items-center justify-between"><h2 className="font-bold text-slate-900">Mis franjas semanales</h2>{!resource.loading && <span className="text-sm text-slate-500">{resource.data?.availability.length || 0} registradas</span>}</div>
+    {resource.loading ? <Loading /> : !resource.error && <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {!resource.data?.availability.length && <Empty icon={CalendarClock} title="Tu agenda está por empezar">Agrega tu primer horario para que otros estudiantes sepan cuándo pueden contar contigo.</Empty>}
+      {resource.data?.availability.map((slot) => <article className={panel + (editing === slot.id ? " ring-2 ring-indigo-400" : "")} key={slot.id}>
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Cada semana</p><h3 className="mt-2 text-xl font-bold text-slate-900">{slot.weekdayLabel}</h3>
+        <p className="mt-3 text-lg tabular-nums text-slate-600">{formatTime(slot.start_time)} <span className="px-1 text-slate-300">—</span> {formatTime(slot.end_time)}</p>
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4"><button className={secondaryButton} onClick={() => edit(slot)} type="button" disabled={busy}><Pencil size={14} />Editar</button><button className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50" onClick={() => { setDeleting(slot); setError(""); }} type="button" disabled={busy}><Trash2 size={14} />Eliminar</button></div>
+      </article>)}
+    </div>}
+    <ConfirmDialog open={!!deleting} title="Eliminar disponibilidad" confirmLabel="Eliminar horario" busy={busy} onConfirm={remove} onClose={() => { setDeleting(null); setError(""); }}>
+      <p>Se eliminará la franja del {deleting?.weekdayLabel.toLowerCase()} de {formatTime(deleting?.start_time)} a {formatTime(deleting?.end_time)}. Las sesiones ya confirmadas conservarán su fecha.</p><Notice error={error} />
+    </ConfirmDialog>
+  </div>;
 }

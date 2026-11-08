@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api, formatDate, formatTime } from "../api/client";
+import { api, currentLocalDateTimeInput, formatDate, formatTime, toApiDateTime } from "../api/client";
 import { CalendarClock, GraduationCap, MessageSquare, Star } from "lucide-react";
 
 export default function TutorDetail() {
@@ -11,13 +11,21 @@ export default function TutorDetail() {
   const [form, setForm] = useState({ subjectId: params.get("subjectId") || "", description: "", preferredAt: "" });
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api(`/api/tutors/${id}`).then(setData).catch((err) => setError(err.message));
+    const controller = new AbortController();
+    setData(null); setError(""); setOk("");
+    api(`/api/tutors/${id}`, { signal: controller.signal }).then(setData).catch((err) => {
+      if (!controller.signal.aborted) setError(err.message);
+    });
+    return () => controller.abort();
   }, [id]);
 
   async function send(e) {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError("");
     try {
       await api("/api/requests", {
@@ -26,13 +34,15 @@ export default function TutorDetail() {
           advisorId: Number(id),
           subjectId: Number(form.subjectId),
           description: form.description,
-          preferredAt: form.preferredAt || null,
+          preferredAt: toApiDateTime(form.preferredAt),
         }),
       });
       setOk("Solicitud enviada al asesor.");
-      setTimeout(() => navigate("/solicitudes"), 800);
+      navigate("/solicitudes");
     } catch (err) {
-      setError(err.message);
+      setError(Object.values(err.data?.fields || {}).filter(Boolean).join(" ") || err.message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -152,8 +162,9 @@ export default function TutorDetail() {
           <p className="mt-1 text-sm text-slate-500">Elige una materia que este estudiante domine.</p>
           <div className="mt-5 space-y-4">
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Materia</label>
+              <label htmlFor="direct-subject" className="mb-2 block text-sm font-semibold text-slate-700">Materia</label>
               <select
+                id="direct-subject"
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                 value={form.subjectId}
                 onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
@@ -168,8 +179,11 @@ export default function TutorDetail() {
               </select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Tema</label>
+              <label htmlFor="direct-topic" className="mb-2 block text-sm font-semibold text-slate-700">Tema</label>
               <textarea
+                id="direct-topic"
+                aria-label="Tema que necesitas reforzar"
+                maxLength={1200}
                 className="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -177,17 +191,20 @@ export default function TutorDetail() {
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Fecha y hora preferida</label>
+              <label htmlFor="direct-date" className="mb-2 block text-sm font-semibold text-slate-700">Fecha y hora preferida (Colombia)</label>
               <input
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                 type="datetime-local"
+                id="direct-date"
+                min={currentLocalDateTimeInput()}
+                required
                 value={form.preferredAt}
                 onChange={(e) => setForm({ ...form, preferredAt: e.target.value })}
               />
             </div>
           </div>
-          <button className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white hover:bg-indigo-700" type="submit">
-            Enviar solicitud
+          <button className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white hover:bg-indigo-700" type="submit" disabled={busy}>
+            {busy ? "Enviando..." : "Enviar solicitud"}
           </button>
         </form>
       </div>

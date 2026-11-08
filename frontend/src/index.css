@@ -2,7 +2,6 @@
 
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
 
 :root {
   --green: #0f6b3c;
@@ -65,7 +64,9 @@ button, input, select, textarea { font: inherit; }
   padding: 22px;
   box-shadow: var(--shadow);
 }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+@layer components {
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+}
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .card {
   background: white;
@@ -73,6 +74,7 @@ button, input, select, textarea { font: inherit; }
   border-radius: 18px;
   padding: 18px;
 }
+
 .card h3 { margin: 0 0 8px; }
 .muted { color: var(--muted); }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -163,3 +165,14 @@ th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
   .nav a { font-size: 0.85rem; }
   .user-name { display: none; }
 }
+
+/* Utilities must win over the legacy base rules above. */
+@tailwind utilities;
+
+button:disabled { cursor: not-allowed; opacity: .55; }
+:is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
+}
+input, select, textarea { min-width: 0; }
+.badge { white-space: nowrap; align-self: flex-start; }

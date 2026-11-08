@@ -31,15 +31,19 @@ function requireAdmin(req, res, next) {
 }
 
 async function loadUser(req, res, next) {
-  const result = await query(
-    "SELECT id, name, email, role, program, semester, bio, is_active FROM users WHERE id=$1",
-    [req.user.id]
-  );
-  if (!result.rows[0] || !result.rows[0].is_active) {
-    return res.status(403).json({ message: "La cuenta no está activa." });
+  try {
+    const result = await query(
+      "SELECT id, name, email, role, program, semester, bio, is_active FROM users WHERE id=$1",
+      [req.user.id]
+    );
+    if (!result.rows[0] || !result.rows[0].is_active) {
+      return res.status(403).json({ message: "La cuenta no está activa." });
+    }
+    req.account = result.rows[0];
+    next();
+  } catch (error) {
+    next(error);
   }
-  req.account = result.rows[0];
-  next();
 }
 
 module.exports = { signToken, requireAuth, requireAdmin, loadUser };

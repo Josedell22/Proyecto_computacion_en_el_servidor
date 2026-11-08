@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS tutoring_requests (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS tutoring_requests_pending_unique
+  ON tutoring_requests (student_id, subject_id, COALESCE(advisor_id, 0))
+  WHERE status = 'pending';
+
 CREATE TABLE IF NOT EXISTS sessions (
   id SERIAL PRIMARY KEY,
   request_id INTEGER NOT NULL UNIQUE REFERENCES tutoring_requests(id) ON DELETE CASCADE,
@@ -68,6 +72,12 @@ CREATE TABLE IF NOT EXISTS ratings (
   comment TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS sessions_participants_scheduled_idx
+  ON sessions (student_id, advisor_id, scheduled_at DESC);
+
+CREATE INDEX IF NOT EXISTS tutoring_requests_participants_status_idx
+  ON tutoring_requests (student_id, advisor_id, status, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS publications (
   id SERIAL PRIMARY KEY,

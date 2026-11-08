@@ -1,16 +1,11 @@
 const Router = require("../router");
-const { query } = require("../db");
+const { query, withTransaction } = require("../db");
+const { httpError, parseFutureDate, parsePositiveId } = require("../academicValidation");
 
 const router = Router();
-
 const REQUEST_SELECT = `
-  SELECT tr.*,
-         s.name AS subject_name,
-         st.name AS student_name,
-         adv.name AS advisor_name,
-         sess.id AS session_id,
-         sess.status AS session_status,
-         sess.scheduled_at
+  SELECT tr.*, s.name AS subject_name, st.name AS student_name, adv.name AS advisor_name,
+         sess.id AS session_id, sess.status AS session_status, sess.scheduled_at
   FROM tutoring_requests tr
   JOIN subjects s ON s.id = tr.subject_id
   JOIN users st ON st.id = tr.student_id
@@ -19,174 +14,124 @@ const REQUEST_SELECT = `
 `;
 
 async function getRequest(id) {
-  const result = await query(`${REQUEST_SELECT} WHERE tr.id=$1`, [id]);
-  return result.rows[0];
+  return (await query(REQUEST_SELECT + " WHERE tr.id=$1", [id])).rows[0];
 }
 
-async function hasAdvisorConflict(advisorId, scheduledAt, excludeSessionId) {
-  const result = await query(
-    `SELECT id FROM sessions
-     WHERE advisor_id=$1 AND status='confirmed' AND scheduled_at=$2
-       AND ($3::int IS NULL OR id <> $3)`,
-    [advisorId, scheduledAt, excludeSessionId || null]
-  );
-  return Boolean(result.rows[0]);
-}
+router.use("/:id", (req, res, next) => {
+  if (!parsePositiveId(req.params.id)) return res.status(400).json({ message: "La solicitud indicada no es válida." });
+  next();
+});
 
 router.get("/", async (req, res) => {
   const scope = req.query.scope || "mine";
-  if (scope === "open") {
-    const result = await query(
-      `${REQUEST_SELECT}
-       WHERE tr.status='pending' AND tr.advisor_id IS NULL
-         AND tr.subject_id IN (SELECT subject_id FROM student_subjects WHERE user_id=$1)
-         AND tr.student_id <> $1
-       ORDER BY tr.created_at DESC`,
-      [req.user.id]
-    );
-    return res.json({ requests: result.rows });
-  }
-  if (scope === "received") {
-    const result = await query(
-      `${REQUEST_SELECT}
-       WHERE tr.status IN ('pending','accepted','rejected','finished')
-         AND (
-           tr.advisor_id=$1
-           OR (tr.advisor_id IS NULL AND tr.status='pending'
-               AND tr.subject_id IN (SELECT subject_id FROM student_subjects WHERE user_id=$1)
-               AND tr.student_id <> $1)
-         )
-       ORDER BY tr.created_at DESC`,
-      [req.user.id]
-    );
-    return res.json({ requests: result.rows });
-  }
-  const result = await query(
-    `${REQUEST_SELECT} WHERE tr.student_id=$1 ORDER BY tr.created_at DESC`,
-    [req.user.id]
-  );
+  if (!["mine", "received", "open"].includes(scope)) throw httpError(400, "La vista solicitada no es válida.");
+  const where = scope === "open"
+    ? `tr.status='pending' AND tr.advisor_id IS NULL AND tr.student_id <> $1
+       AND s.is_active AND st.is_active
+       AND tr.subject_id IN (SELECT subject_id FROM student_subjects WHERE user_id=$1)`
+    : scope === "received" ? "tr.advisor_id=$1" : "tr.student_id=$1";
+  const result = await query(REQUEST_SELECT + " WHERE " + where + " ORDER BY tr.created_at DESC, tr.id DESC", [req.user.id]);
   res.json({ requests: result.rows });
 });
 
 router.post("/", async (req, res) => {
   const { subjectId, description, preferredAt, advisorId } = req.body || {};
-  if (!subjectId || !description || !String(description).trim()) {
-    return res.status(400).json({
-      message: "Debe completar la materia y la descripción del tema.",
-      fields: {
-        subjectId: !subjectId ? "Seleccione una materia." : null,
-        description: !description || !String(description).trim() ? "Explique el tema que necesita." : null,
-      },
-    });
+  const subject = parsePositiveId(subjectId);
+  const direct = advisorId !== undefined && advisorId !== null && advisorId !== "";
+  const advisor = direct ? parsePositiveId(advisorId) : null;
+  const schedule = parseFutureDate(preferredAt);
+  const text = typeof description === "string" ? description.trim() : "";
+  const fields = {
+    subjectId: !subject ? "Seleccione una materia válida." : null,
+    advisorId: direct && !advisor ? "Seleccione un asesor válido." : null,
+    description: !text ? "Explique el tema que necesita." : text.length > 1200 ? "Use hasta 1200 caracteres." : null,
+    preferredAt: schedule.error || null,
+  };
+  if (Object.values(fields).some(Boolean)) return res.status(400).json({ message: "Revise la información de la solicitud.", fields });
+  if (advisor === req.user.id) throw httpError(400, "No puede enviarse una solicitud a sí mismo.");
+  if (!(await query("SELECT 1 FROM subjects WHERE id=$1 AND is_active", [subject])).rowCount) {
+    throw httpError(400, "Solo puede usar materias activas registradas.");
   }
+  if (advisor && !(await query(
+    `SELECT 1 FROM users u JOIN student_subjects ss ON ss.user_id=u.id
+     WHERE u.id=$1 AND u.is_active AND u.role='student' AND ss.subject_id=$2`, [advisor, subject]
+  )).rowCount) throw httpError(400, "El estudiante seleccionado no tiene dominio registrado en esa materia.");
 
-  const subject = await query("SELECT * FROM subjects WHERE id=$1 AND is_active=TRUE", [subjectId]);
-  if (!subject.rows[0]) {
-    return res.status(400).json({ message: "Solo puede usar materias activas registradas." });
-  }
-
-  let advisor = null;
-  if (advisorId) {
-    if (Number(advisorId) === req.user.id) {
-      return res.status(400).json({ message: "No puede enviarse una solicitud a sí mismo." });
-    }
-    const advisorRow = await query(
-      `SELECT u.id FROM users u
-       JOIN student_subjects ss ON ss.user_id=u.id
-       WHERE u.id=$1 AND u.is_active=TRUE AND ss.subject_id=$2`,
-      [advisorId, subjectId]
+  const id = await withTransaction(async (client) => {
+    // Serialize duplicate checks also on installations awaiting the index migration.
+    await client.query("SELECT pg_advisory_xact_lock(4101, $1)", [req.user.id]);
+    const duplicate = await client.query(
+      `SELECT id FROM tutoring_requests WHERE student_id=$1 AND subject_id=$2
+       AND advisor_id IS NOT DISTINCT FROM $3::int AND status='pending'`, [req.user.id, subject, advisor]
     );
-    if (!advisorRow.rows[0]) {
-      return res.status(400).json({
-        message: "El estudiante seleccionado no tiene dominio registrado en esa materia.",
-      });
-    }
-    advisor = advisorRow.rows[0].id;
-    const dup = await query(
-      `SELECT id FROM tutoring_requests
-       WHERE student_id=$1 AND advisor_id=$2 AND subject_id=$3 AND status='pending'`,
-      [req.user.id, advisor, subjectId]
+    if (duplicate.rowCount) throw httpError(409, "Ya existe una solicitud pendiente para esta materia y destinatario.");
+    const result = await client.query(
+      `INSERT INTO tutoring_requests (student_id, advisor_id, subject_id, description, preferred_at)
+       VALUES ($1,$2,$3,$4,$5) RETURNING id`, [req.user.id, advisor, subject, text, schedule.value]
     );
-    if (dup.rows[0]) {
-      return res.status(409).json({ message: "Ya existe una solicitud activa para esta asesoría." });
-    }
-  }
-
-  const created = await query(
-    `INSERT INTO tutoring_requests (student_id, advisor_id, subject_id, description, preferred_at)
-     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-    [req.user.id, advisor, subjectId, String(description).trim(), preferredAt || null]
-  );
-  res.status(201).json({ request: await getRequest(created.rows[0].id) });
+    return result.rows[0].id;
+  });
+  res.status(201).json({ request: await getRequest(id) });
 });
 
-router.patch("/:id/cancel", async (req, res) => {
-  const current = await getRequest(req.params.id);
-  if (!current || current.student_id !== req.user.id) {
-    return res.status(404).json({ message: "Solicitud no encontrada." });
-  }
-  if (current.status !== "pending") {
-    return res.status(400).json({ message: "Solo puede cancelar una solicitud que aún no ha sido aceptada." });
-  }
-  await query("UPDATE tutoring_requests SET status='cancelled' WHERE id=$1", [current.id]);
-  res.json({ request: await getRequest(current.id) });
-});
+for (const action of ["cancel", "reject"]) {
+  router.patch("/:id/" + action, async (req, res) => {
+    const id = Number(req.params.id);
+    // UPDATE rechecks the state after a concurrent accept commits.
+    const owner = action === "cancel" ? "student_id" : "advisor_id";
+    const status = action === "cancel" ? "cancelled" : "rejected";
+    const updated = await query(
+      "UPDATE tutoring_requests SET status=$1 WHERE id=$2 AND " + owner + "=$3 AND status='pending' RETURNING id",
+      [status, id, req.user.id]
+    );
+    if (!updated.rowCount) {
+      const current = await getRequest(id);
+      if (!current || current[owner] !== req.user.id) throw httpError(404, "Solicitud no encontrada.");
+      throw httpError(409, "La solicitud ya fue atendida. Actualice la lista para ver su estado.");
+    }
+    res.json({ request: await getRequest(id) });
+  });
+}
 
 router.patch("/:id/accept", async (req, res) => {
-  const current = await getRequest(req.params.id);
-  if (!current) return res.status(404).json({ message: "Solicitud no encontrada." });
-  if (current.status === "cancelled") {
-    return res.status(400).json({ message: "Las solicitudes canceladas no pueden aceptarse." });
-  }
-  if (current.status !== "pending") {
-    return res.status(400).json({ message: "Solo se pueden aceptar solicitudes pendientes." });
-  }
+  const requestId = Number(req.params.id);
+  const session = await withTransaction(async (client) => {
+    const current = (await client.query("SELECT * FROM tutoring_requests WHERE id=$1 FOR UPDATE", [requestId])).rows[0];
+    if (!current) throw httpError(404, "Solicitud no encontrada.");
+    if (current.student_id === req.user.id || (current.advisor_id && current.advisor_id !== req.user.id)) {
+      throw httpError(403, "No puede aceptar esta solicitud.");
+    }
+    if (current.status !== "pending") throw httpError(409, "Esta solicitud ya fue atendida y no puede volver a aceptarse.");
+    const eligible = await client.query(
+      `SELECT 1 FROM student_subjects ss JOIN subjects s ON s.id=ss.subject_id
+       JOIN users u ON u.id=ss.user_id
+       WHERE ss.user_id=$1 AND ss.subject_id=$2 AND s.is_active AND u.is_active AND u.role='student'`,
+      [req.user.id, current.subject_id]
+    );
+    if (!eligible.rowCount) throw httpError(403, "Debe tener dominio registrado en una materia activa para aceptar.");
 
-  const isAssigned = current.advisor_id === req.user.id;
-  const canClaimOpen =
-    !current.advisor_id &&
-    current.student_id !== req.user.id &&
-    (
-      await query("SELECT 1 FROM student_subjects WHERE user_id=$1 AND subject_id=$2", [
-        req.user.id,
-        current.subject_id,
-      ])
-    ).rows[0];
-
-  if (!isAssigned && !canClaimOpen) {
-    return res.status(403).json({ message: "No puede aceptar esta solicitud." });
-  }
-
-  const scheduledAt = current.preferred_at || new Date();
-  if (await hasAdvisorConflict(req.user.id, scheduledAt)) {
-    return res.status(409).json({
-      message: "Ya tiene una sesión confirmada en ese horario.",
-    });
-  }
-
-  await query("UPDATE tutoring_requests SET status='accepted', advisor_id=$1 WHERE id=$2", [
-    req.user.id,
-    current.id,
-  ]);
-  const session = await query(
-    `INSERT INTO sessions (request_id, student_id, advisor_id, subject_id, scheduled_at)
-     VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [current.id, current.student_id, req.user.id, current.subject_id, scheduledAt]
-  );
-  res.json({ request: await getRequest(current.id), session: session.rows[0] });
-});
-
-router.patch("/:id/reject", async (req, res) => {
-  const current = await getRequest(req.params.id);
-  if (!current) return res.status(404).json({ message: "Solicitud no encontrada." });
-  if (current.advisor_id !== req.user.id) {
-    return res.status(403).json({ message: "Solo el asesor asignado puede rechazar esta solicitud." });
-  }
-  if (current.status !== "pending") {
-    return res.status(400).json({ message: "Solo se pueden rechazar solicitudes pendientes." });
-  }
-  await query("UPDATE tutoring_requests SET status='rejected' WHERE id=$1", [current.id]);
-  res.json({ request: await getRequest(current.id) });
+    const date = parseFutureDate(req.body?.scheduledAt ?? current.preferred_at?.toISOString());
+    if (date.error) throw httpError(400, "Indique una fecha futura para programar la sesión.");
+    // Ordered locks protect both participants, including when they switch roles.
+    for (const id of [current.student_id, req.user.id].sort((a, b) => a - b)) {
+      await client.query("SELECT pg_advisory_xact_lock(4102, $1)", [id]);
+    }
+    const active = await client.query("SELECT id FROM users WHERE id=ANY($1::int[]) AND is_active", [[current.student_id, req.user.id]]);
+    if (active.rowCount !== 2) throw httpError(409, "Uno de los participantes tiene la cuenta desactivada.");
+    const conflict = await client.query(
+      `SELECT id FROM sessions WHERE status='confirmed' AND scheduled_at=$1
+       AND (student_id=ANY($2::int[]) OR advisor_id=ANY($2::int[]))`,
+      [date.value, [current.student_id, req.user.id]]
+    );
+    if (conflict.rowCount) throw httpError(409, "Uno de los participantes ya tiene una sesión confirmada en ese horario.");
+    await client.query("UPDATE tutoring_requests SET status='accepted', advisor_id=$1 WHERE id=$2", [req.user.id, requestId]);
+    return (await client.query(
+      `INSERT INTO sessions (request_id, student_id, advisor_id, subject_id, scheduled_at)
+       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [requestId, current.student_id, req.user.id, current.subject_id, date.value]
+    )).rows[0];
+  });
+  res.json({ request: await getRequest(requestId), session });
 });
 
 module.exports = router;
