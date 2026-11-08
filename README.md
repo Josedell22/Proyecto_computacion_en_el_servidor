@@ -48,14 +48,14 @@ Límites del plan free: el servicio se duerme a los 15 minutos sin tráfico (el 
 1. Suba este repositorio a GitHub.
 2. En [Render](https://dashboard.render.com/) → **New** → **Blueprint**.
 3. Elija el repo. Render leerá `render.yaml`.
-4. Cuando pida secretos, defina `ADMIN_EMAIL` y `ADMIN_PASSWORD` (mínimo 12 caracteres, distinta de `Admin1234`). `JWT_SECRET` y `DATABASE_URL` se generan solos.
+4. Cuando pida secretos, defina `ADMIN_EMAIL` y `ADMIN_PASSWORD` (mínimo 12 caracteres, distinta de `Admin1234`). `JWT_SECRET` y `DATABASE_URL` se generan solos. El Blueprint activa `SEED_DEMO=true` para cargar Ana, Carlos y Laura.
 5. Cree el Blueprint y espere el deploy. CORS usa `RENDER_EXTERNAL_URL` (`https://studymatch.onrender.com`).
 
 La app queda en la URL `.onrender.com` del servicio. No publique `.env` ni las claves del panel.
 
 ## Cuentas de prueba
 
-Estas credenciales son solo para desarrollo local; no las uses en producción.
+Estas credenciales de estudiantes son las mismas en local y en Render (`SEED_DEMO`). El administrador en Render es el de `ADMIN_EMAIL` / `ADMIN_PASSWORD`, no `Admin1234`.
 
 | Rol | Correo | Contraseña |
 | --- | --- | --- |

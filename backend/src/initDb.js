@@ -42,7 +42,8 @@ async function init() {
     );
   }
 
-  if (process.env.NODE_ENV !== "production") {
+  const seedDemo = process.env.NODE_ENV !== "production" || process.env.SEED_DEMO === "true";
+  if (seedDemo) {
     const demoHash = await bcrypt.hash("Estudiante1", 10);
     const demos = [
       ["Ana Torres", "ana@usco.edu.co", "Ingeniería de Sistemas", 6, "Me gusta explicar álgebra y bases de datos."],
@@ -122,7 +123,7 @@ async function init() {
 
   console.log("Base de datos inicializada.");
   console.log(`Administrador configurado: ${adminEmail}`);
-  if (process.env.NODE_ENV !== "production") {
+  if (seedDemo) {
     console.log("Estudiantes demo: ana@usco.edu.co, carlos@usco.edu.co, laura@usco.edu.co / Estudiante1");
   }
   await pool.end();
