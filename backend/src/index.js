@@ -1,5 +1,6 @@
 require("dotenv").config();
 const { validateApiConfig } = require("./config");
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
@@ -25,6 +26,14 @@ app.use("/api/history", requireAuth, loadUser, require("./routes/history"));
 app.use("/api/publications", requireAuth, loadUser, require("./routes/publications"));
 app.use("/api/admin", requireAuth, loadUser, requireAdmin, require("./routes/admin"));
 
+const frontendDist = path.join(__dirname, "..", "..", "frontend", "dist");
+if (fs.existsSync(path.join(frontendDist, "index.html"))) {
+  app.use(express.static(frontendDist));
+  app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/, (_req, res) => {
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
+
 app.use((err, _req, res, _next) => {
   if (!err.status || err.status >= 500) console.error(err);
   const status = Number.isInteger(err.status) && err.status >= 400 && err.status <= 599 ? err.status : 500;
@@ -37,8 +46,8 @@ app.use((err, _req, res, _next) => {
 
 if (require.main === module) {
   const port = Number(process.env.PORT) || 4000;
-  app.listen(port, () => {
-    console.log(`StudyMatch API en http://localhost:${port}`);
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`StudyMatch API en http://0.0.0.0:${port}`);
   });
 }
 module.exports = app;

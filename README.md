@@ -39,6 +39,40 @@ npm run dev
 
 La API queda en `http://localhost:4000` y la interfaz en `http://localhost:5173`.
 
+## Despliegue (Oracle Cloud Always Free)
+
+No existe un hosting realmente ilimitado y 100 % gratis. Render, Koyeb y similares duermen el servicio o caducan la base. Lo más cercano para esta app (Express + PostgreSQL + archivos, sin apagarse por inactividad) es **Oracle Cloud Always Free**: una VM Ampere A1 (hasta 2 OCPU y 12 GB RAM), 200 GB de disco y 10 TB de tráfico al mes, sin costo si te quedas en esos cupos. Oracle pide tarjeta para verificar identidad, no cobra el Always Free, y puede recuperar VMs inactivas.
+
+La carpeta `frontend/` y `backend/` no se mueven. En producción Docker construye la interfaz, Express la sirve junto a la API en el puerto 80 y PostgreSQL queda en la misma VM.
+
+1. Cree una cuenta en [Oracle Cloud Free Tier](https://www.oracle.com/cloud/free/).
+2. Cree una instancia Ubuntu Always Free: forma **VM.Standard.A1.Flex**, 2 OCPU, 12 GB, IP pública y clave SSH.
+3. En la VCN (Security List o NSG) permita TCP **22** y **80** desde internet.
+4. Suba el repositorio a la VM y prepare Docker:
+
+```bash
+git clone <url-del-repo> studymatch
+cd studymatch
+sh deploy/oracle-setup.sh
+```
+
+5. Cierre la sesión SSH, vuelva a entrar y configure secretos:
+
+```bash
+cp .env.production.example .env.production
+nano .env.production
+```
+
+`CLIENT_ORIGIN` debe ser exactamente `http://IP_PUBLICA` (sin barra final). `JWT_SECRET` ≥ 32 caracteres. `ADMIN_PASSWORD` ≥ 12 caracteres y distinta de `Admin1234`. `POSTGRES_PASSWORD` es la clave interna de PostgreSQL.
+
+6. Levante la app (construya **en la VM** para que coincida con ARM):
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+```
+
+La app queda en `http://IP_PUBLICA`. La API y los archivos se sirven en el mismo origen (`/api`, `/uploads`), así que el frontend no necesita proxy de Vite.
+
 ## Cuentas de prueba
 
 Estas credenciales son solo para desarrollo local; no las uses en producción.
