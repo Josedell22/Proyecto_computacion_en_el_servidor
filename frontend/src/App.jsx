@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
+import BrandLoader from "./components/BrandLoader.jsx";
 import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
@@ -20,14 +21,14 @@ import Admin from "./pages/Admin.jsx";
 
 function Private({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-medium text-slate-500">Cargando...</div>;
+  if (loading) return <BrandLoader variant="fullscreen" />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
 function Guest({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-medium text-slate-500">Cargando...</div>;
+  if (loading) return <BrandLoader variant="fullscreen" />;
   if (user) return <Navigate to="/panel" replace />;
   return children;
 }

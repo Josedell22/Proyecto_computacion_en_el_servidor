@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { LoaderCircle } from "lucide-react";
+import BrandLoader from "./BrandLoader";
 
 export const primaryButton = "inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700";
 export const secondaryButton = "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50";
@@ -21,7 +21,7 @@ export function Notice({ error, message, retry }) {
 }
 
 export function Loading() {
-  return <div role="status" className="flex items-center justify-center gap-2 py-14 text-sm text-slate-500"><LoaderCircle size={18} className="animate-spin" />Cargando...</div>;
+  return <BrandLoader variant="inline" message="Cargando..." />;
 }
 
 export function Empty({ icon: Icon, title, children }) {
