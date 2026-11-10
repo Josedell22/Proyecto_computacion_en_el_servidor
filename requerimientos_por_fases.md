@@ -23,7 +23,7 @@ Estructura alineada a la hoja de ruta de desarrollo en 6 Fases.
 **Objetivo:** Establecer la base de usuarios, control de acceso y la información académica fundamental.
 
 #### Requerimientos Funcionales:
-* **RF-1.1 (Autenticación):** Registro e inicio de sesión de estudiantes con correo institucional (`@usco.edu.co` / `@studymatch.edu`) y contraseña encriptada con `bcrypt`.
+* **RF-1.1 (Autenticación):** Registro e inicio de sesión de estudiantes con cualquier correo electrónico válido y contraseña encriptada con `bcrypt`.
 * **RF-1.2 (JWT):** Autenticación mediante tokens JWT enviados en la cabecera `Authorization: Bearer <token>`.
 * **RF-1.3 (Perfil Académico):** Edición de datos personales (Nombre completo, Programa académico, Semestre actual y Biografía).
 * **RF-1.4 (Materias Dominadas):** Selección de materias que domina el estudiante desde el catálogo activo para postularse como asesor.

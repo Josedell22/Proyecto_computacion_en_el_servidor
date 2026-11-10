@@ -32,7 +32,7 @@ function profileStatus(user, subjectCount) {
 }
 
 function isValidEmail(email) {
-  return /^[^\s@]+@(usco\.edu\.co|studymatch\.edu)$/i.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function isValidPassword(password) {

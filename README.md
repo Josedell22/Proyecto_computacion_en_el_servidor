@@ -43,6 +43,8 @@ La API queda en `http://localhost:4000` y la interfaz en `http://localhost:5173`
 
 El archivo `render.yaml` define un servicio web Docker (frontend + API) y PostgreSQL en el plan gratuito. `frontend/` y `backend/` no se mueven: el `Dockerfile` construye la interfaz y Express la sirve junto a `/api` y `/uploads`.
 
+> **Nota sobre registro:** cualquier persona puede registrarse con un correo electrónico válido. Las cuentas demo conservan correos `@usco.edu.co`, pero no es un requisito para nuevos usuarios.
+
 Límites del plan free: el servicio se duerme a los 15 minutos sin tráfico (el primer request tarda ~1 minuto), Postgres free caduca a los 30 días (1 GB, una base por workspace) y los archivos de publicaciones se pierden al redesplegar (disco efímero).
 
 1. Suba este repositorio a GitHub.
@@ -74,7 +76,7 @@ No publiques archivos `.env` ni compartas sus valores.
 La guía de entrega, reglas y pruebas de solicitudes, disponibilidad, sesiones, valoraciones e historial está en [Entrega de módulos 4–6](docs/entrega-modulos-4-6.md).
 Para actualizar una base existente sin cargar datos demo, ejecute `npm run db:migrate` desde `backend`.
 
-- Registro e inicio de sesión (JWT + contraseñas con bcrypt)
+- Registro e inicio de sesión con cualquier correo electrónico válido (JWT + contraseñas con bcrypt)
 - Consultar y actualizar perfiles académicos
 - Consultar materias; crear, modificar y desactivar materias (administrador)
 - Registrar las materias que domina cada estudiante
