@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { GraduationCap, Lock, LogIn, Mail } from "lucide-react";
+import { ArrowLeft, GraduationCap, Lock, LogIn, Mail } from "lucide-react";
+import Button from "../components/ui/Button";
+import Field from "../components/ui/Field";
+import Input from "../components/ui/Input";
 
 export default function Login() {
   const { login } = useAuth();
@@ -9,15 +12,19 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
+    setBusy(true);
     try {
       await login(email, password);
       navigate("/panel");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -31,10 +38,38 @@ export default function Login() {
         </div>
         {error && <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
         <div className="space-y-5">
-          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Correo electrónico</label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-3 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" type="email" placeholder="nombre@ejemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} required /></div></div>
-          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Contraseña</label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-3 text-slate-800 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" type="password" placeholder="Tu contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required /></div></div>
+          <Field label="Correo electrónico" htmlFor="login-email">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input
+                id="login-email"
+                className="pl-10"
+                type="email"
+                placeholder="nombre@ejemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </Field>
+          <Field label="Contraseña" htmlFor="login-password">
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input
+                id="login-password"
+                className="pl-10"
+                type="password"
+                placeholder="Tu contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </Field>
         </div>
-        <button className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" type="submit"><LogIn size={18} /> Ingresar</button>
+        <Button type="submit" className="mt-7 w-full" loading={busy}>
+          <LogIn size={18} /> Ingresar
+        </Button>
         <p className="mt-6 text-center text-sm text-slate-500">¿Aún no tienes cuenta? <Link className="font-semibold text-indigo-600 hover:text-indigo-700" to="/registro">Regístrate</Link></p>
       </form>
     </div>

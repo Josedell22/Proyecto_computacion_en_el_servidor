@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ArrowLeft, GraduationCap, Lock, Mail, UserRound, UserPlus } from "lucide-react";
+import Button from "../components/ui/Button";
+import Field from "../components/ui/Field";
+import Input from "../components/ui/Input";
 
 export default function Register() {
   const { register } = useAuth();
@@ -9,6 +12,7 @@ export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -19,11 +23,14 @@ export default function Register() {
       return;
     }
     setEmailError("");
+    setBusy(true);
     try {
       await register({ ...form, email: normalizedEmail });
       navigate("/perfil");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -37,11 +44,51 @@ export default function Register() {
         </div>
         {error && <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
         <div className="space-y-5">
-          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Nombre completo</label><div className="relative"><UserRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div></div>
-          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Correo electrónico</label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className={`w-full rounded-xl border py-3 pl-10 pr-3 outline-none focus:ring-2 focus:ring-indigo-500/20 ${emailError ? "border-red-300 focus:border-red-500" : "border-slate-300 focus:border-indigo-500"}`} type="email" placeholder="nombre@ejemplo.com" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setEmailError(""); }} required /></div>{emailError && <p className="mt-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{emailError}</p>}</div>
-          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Contraseña</label><div className="relative"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" type="password" placeholder="Mínimo 8 caracteres" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div><p className="mt-2 text-xs text-slate-500">Usa al menos 8 caracteres, una letra y un número.</p></div>
+          <Field label="Nombre completo" htmlFor="register-name">
+            <div className="relative">
+              <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input
+                id="register-name"
+                className="pl-10"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+            </div>
+          </Field>
+          <Field label="Correo electrónico" htmlFor="register-email" error={emailError}>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input
+                id="register-email"
+                className={`pl-10 ${emailError ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" : ""}`}
+                type="email"
+                placeholder="nombre@ejemplo.com"
+                value={form.email}
+                onChange={(e) => { setForm({ ...form, email: e.target.value }); setEmailError(""); }}
+                required
+              />
+            </div>
+          </Field>
+          <Field label="Contraseña" htmlFor="register-password">
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input
+                id="register-password"
+                className="pl-10"
+                type="password"
+                placeholder="Mínimo 8 caracteres"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Usa al menos 8 caracteres, una letra y un número.</p>
+          </Field>
         </div>
-        <button className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" type="submit"><UserPlus size={18} /> Registrarme</button>
+        <Button type="submit" className="mt-7 w-full" loading={busy}>
+          <UserPlus size={18} /> Registrarme
+        </Button>
         <p className="mt-6 text-center text-sm text-slate-500"><Link className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-700" to="/login"><ArrowLeft size={15} /> Volver a iniciar sesión</Link></p>
       </form>
     </div>

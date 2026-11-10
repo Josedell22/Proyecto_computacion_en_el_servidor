@@ -1,32 +1,86 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { Notice, PageHeading } from "../components/AcademicUI";
+import BrandLoader from "../components/BrandLoader";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import Field from "../components/ui/Field";
+import Input from "../components/ui/Input";
+import SubjectSelect from "../components/ui/SubjectSelect";
+import Textarea from "../components/ui/Textarea";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/png",
+  "image/jpeg",
+];
+const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"];
+
+function validateFile(file) {
+  if (!file) return "";
+  if (file.size > MAX_FILE_SIZE) return "El archivo supera los 5 MB permitidos.";
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) return "Formato no válido. Usa PDF, DOC, DOCX, PNG o JPG.";
+  }
+  return "";
+}
 
 export default function PublicationForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [subjects, setSubjects] = useState([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [loadingPublication, setLoadingPublication] = useState(Boolean(id));
   const [form, setForm] = useState({ title: "", description: "", content: "", subjectId: "" });
   const [file, setFile] = useState(null);
+  const [fileError, setFileError] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    api("/api/subjects").then((d) => setSubjects(d.subjects));
-    if (id) {
-      api(`/api/publications/${id}`).then((d) => {
+    setLoadingSubjects(true);
+    api("/api/subjects")
+      .then((d) => setSubjects(d.subjects))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoadingSubjects(false));
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoadingPublication(true);
+    api(`/api/publications/${id}`)
+      .then((d) => {
         setForm({
           title: d.publication.title,
           description: d.publication.description,
           content: d.publication.content || "",
-          subjectId: d.publication.subject_id,
+          subjectId: String(d.publication.subject_id),
         });
-      }).catch((err) => setError(err.message));
-    }
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoadingPublication(false));
   }, [id]);
+
+  function handleFileChange(e) {
+    const selected = e.target.files[0] || null;
+    setFile(selected);
+    setFileError(validateFile(selected));
+  }
 
   async function save(e) {
     e.preventDefault();
     setError("");
+    const fileValidation = validateFile(file);
+    if (fileValidation) {
+      setFileError(fileValidation);
+      return;
+    }
+    setIsSubmitting(true);
     const body = new FormData();
     body.append("title", form.title);
     body.append("description", form.description);
@@ -43,28 +97,87 @@ export default function PublicationForm() {
       }
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
+  const title = id ? "Editar publicación" : "Crear publicación";
+  const description = id
+    ? "Actualiza el recurso académico para la comunidad."
+    : "Comparte apuntes, guías o parciales con otros estudiantes.";
+
+  if (loadingPublication) {
+    return <BrandLoader variant="page" message="Cargando publicación..." />;
+  }
+
   return (
-    <form className="panel" onSubmit={save}>
-      <h2>{id ? "Editar publicación" : "Crear publicación"}</h2>
-      {error && <div className="alert">{error}</div>}
-      <div className="field"><label>Título</label><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
-      <div className="field">
-        <label>Materia</label>
-        <select value={form.subjectId} onChange={(e) => setForm({ ...form, subjectId: e.target.value })} required>
-          <option value="">Seleccione</option>
-          {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </div>
-      <div className="field"><label>Descripción</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required /></div>
-      <div className="field"><label>Contenido</label><textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} /></div>
-      <div className="field">
-        <label>Archivo (PDF, DOC, DOCX, PNG, JPG · máx. 5 MB)</label>
-        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-      </div>
-      <button className="btn" type="submit">Publicar</button>
-    </form>
+    <div className="space-y-6">
+      <PageHeading eyebrow="Recursos académicos" title={title} description={description} />
+      <Notice error={error} />
+      <Card>
+        <form className="space-y-5" onSubmit={save}>
+          <Field label="Título">
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Ej: Guía de matrices y determinantes"
+              required
+            />
+          </Field>
+          <SubjectSelect
+            subjects={subjects}
+            value={form.subjectId}
+            onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
+            required
+            label="Materia"
+            placeholder={loadingSubjects ? "Cargando materias..." : "Seleccione una materia"}
+          />
+          <Field label="Descripción">
+            <Textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Resume el contenido del recurso..."
+              required
+              rows={4}
+            />
+          </Field>
+          <Field label="Contenido">
+            <Textarea
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              placeholder="Puedes agregar explicaciones, enlaces o notas adicionales (opcional)."
+              rows={6}
+            />
+          </Field>
+          <Field label="Archivo (PDF, DOC, DOCX, PNG, JPG · máx. 5 MB)" error={fileError}>
+            <Input
+              type="file"
+              accept={ALLOWED_EXTENSIONS.join(",")}
+              onChange={handleFileChange}
+            />
+          </Field>
+          {file && (
+            <p className="text-sm text-slate-600">
+              Archivo seleccionado: <span className="font-medium">{file.name}</span>{" "}
+              ({(file.size / 1024 / 1024).toFixed(2)} MB)
+            </p>
+          )}
+          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => navigate("/publicaciones")}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" loading={isSubmitting} disabled={loadingSubjects}>
+              {id ? "Guardar cambios" : "Publicar recurso"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }
