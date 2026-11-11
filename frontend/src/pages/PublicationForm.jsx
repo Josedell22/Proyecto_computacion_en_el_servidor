@@ -43,18 +43,22 @@ export default function PublicationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoadingSubjects(true);
-    api("/api/subjects")
-      .then((d) => setSubjects(d.subjects))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoadingSubjects(false));
+    api("/api/subjects", { signal: controller.signal })
+      .then((d) => { if (!controller.signal.aborted) setSubjects(d.subjects); })
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingSubjects(false); });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
     if (!id) return;
+    const controller = new AbortController();
     setLoadingPublication(true);
-    api(`/api/publications/${id}`)
+    api(`/api/publications/${id}`, { signal: controller.signal })
       .then((d) => {
+        if (controller.signal.aborted) return;
         setForm({
           title: d.publication.title,
           description: d.publication.description,
@@ -62,8 +66,9 @@ export default function PublicationForm() {
           subjectId: String(d.publication.subject_id),
         });
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoadingPublication(false));
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingPublication(false); });
+    return () => controller.abort();
   }, [id]);
 
   function handleFileChange(e) {

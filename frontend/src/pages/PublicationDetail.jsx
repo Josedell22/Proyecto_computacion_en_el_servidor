@@ -32,21 +32,25 @@ export default function PublicationDetail() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  async function load() {
+  async function load(signal) {
     setLoading(true);
     try {
-      const d = await api(`/api/publications/${id}`);
-      setData(d);
-      setError("");
+      const d = await api(`/api/publications/${id}`, { signal });
+      if (!signal?.aborted) {
+        setData(d);
+        setError("");
+      }
     } catch (err) {
-      setError(err.message);
+      if (!signal?.aborted) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
   }, [id]);
 
   async function remove() {

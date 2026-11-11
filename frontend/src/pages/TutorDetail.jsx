@@ -156,7 +156,7 @@ export default function TutorDetail() {
                     <div className="flex items-center gap-1 text-amber-500">
                       {[1, 2, 3, 4, 5].map((star) => <Star key={star} fill={star <= r.stars ? "currentColor" : "none"} size={15} />)}
                     </div>
-                    <span className="text-xs text-slate-400">{formatDate(r.created_at)}</span>
+                    <span className="text-xs text-slate-600">{formatDate(r.created_at)}</span>
                   </div>
                   <p className="mt-2 text-sm font-medium text-slate-700">{r.subject_name}</p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">{r.comment || "Sin comentario."}</p>

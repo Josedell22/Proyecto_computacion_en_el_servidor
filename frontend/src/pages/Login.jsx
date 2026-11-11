@@ -39,32 +39,26 @@ export default function Login() {
         {error && <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
         <div className="space-y-5">
           <Field label="Correo electrónico" htmlFor="login-email">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input
-                id="login-email"
-                className="pl-10"
-                type="email"
-                placeholder="nombre@ejemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+            <Input
+              id="login-email"
+              type="email"
+              startIcon={<Mail size={18} />}
+              placeholder="nombre@ejemplo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </Field>
           <Field label="Contraseña" htmlFor="login-password">
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input
-                id="login-password"
-                className="pl-10"
-                type="password"
-                placeholder="Tu contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            <Input
+              id="login-password"
+              type="password"
+              startIcon={<Lock size={18} />}
+              placeholder="Tu contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
           </Field>
         </div>
         <Button type="submit" className="mt-7 w-full" loading={busy}>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { BookOpen, Check, Pencil, Plus, Power, Search, Trash2, X } from "lucide-react";
-import { ConfirmDialog, Notice, PageHeading } from "../components/AcademicUI";
+import { ConfirmDialog, Empty, Notice, PageHeading } from "../components/AcademicUI";
 import BrandLoader from "../components/BrandLoader";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -22,25 +22,30 @@ export default function Subjects() {
   const [editing, setEditing] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busyForm, setBusyForm] = useState(false);
+  const [busyToggleId, setBusyToggleId] = useState(null);
+  const [busyDelete, setBusyDelete] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  async function load(term = q) {
+  async function load(term = q, signal) {
     setLoading(true);
     try {
-      const data = await api(`/api/subjects?q=${encodeURIComponent(term)}${user.role === "admin" ? "&all=1" : ""}`);
+      const data = await api(`/api/subjects?q=${encodeURIComponent(term)}${user.role === "admin" ? "&all=1" : ""}`, { signal });
+      if (signal?.aborted) return;
       setSubjects(data.subjects);
       setMessage(data.message || "");
       setError("");
     } catch (err) {
-      setError(err.message);
+      if (!signal?.aborted) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
   useEffect(() => {
-    load("");
+    const controller = new AbortController();
+    load("", controller.signal);
+    return () => controller.abort();
   }, []);
 
   function openCreate() {
@@ -64,7 +69,7 @@ export default function Subjects() {
 
   async function createSubject(e) {
     e.preventDefault();
-    setBusy(true);
+    setBusyForm(true);
     setError("");
     try {
       await api("/api/subjects", { method: "POST", body: JSON.stringify(form) });
@@ -73,12 +78,13 @@ export default function Subjects() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setBusy(false);
+      setBusyForm(false);
     }
   }
 
   async function toggle(subject) {
-    setBusy(true);
+    if (busyToggleId) return;
+    setBusyToggleId(subject.id);
     setError("");
     try {
       await api(`/api/subjects/${subject.id}`, {
@@ -89,13 +95,13 @@ export default function Subjects() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setBusy(false);
+      setBusyToggleId(null);
     }
   }
 
   async function updateSubject(e) {
     e.preventDefault();
-    setBusy(true);
+    setBusyForm(true);
     setError("");
     try {
       await api(`/api/subjects/${editing.id}`, {
@@ -107,13 +113,13 @@ export default function Subjects() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setBusy(false);
+      setBusyForm(false);
     }
   }
 
   async function removeSubject() {
     if (!confirmDelete) return;
-    setBusy(true);
+    setBusyDelete(true);
     setError("");
     try {
       await api(`/api/subjects/${confirmDelete.id}`, { method: "DELETE" });
@@ -123,7 +129,7 @@ export default function Subjects() {
       setError(err.message);
       setConfirmDelete(null);
     } finally {
-      setBusy(false);
+      setBusyDelete(false);
     }
   }
 
@@ -176,9 +182,9 @@ export default function Subjects() {
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {subjects.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 md:col-span-2 lg:col-span-3">
-              No hay materias para mostrar.
-            </div>
+            <Empty icon={BookOpen} title="No hay materias para mostrar">
+              {q ? "Prueba con otro término de búsqueda." : "Aparecerán aquí las asignaturas registradas en el catálogo."}
+            </Empty>
           )}
           {subjects.map((subject) => (
             <Card hover key={subject.id} className="flex min-h-56 flex-col">
@@ -213,7 +219,8 @@ export default function Subjects() {
                     className="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200"
                     onClick={() => toggle(subject)}
                     type="button"
-                    loading={busy}
+                    loading={busyToggleId === subject.id}
+                    disabled={busyToggleId !== null}
                   >
                     <Power size={15} /> {subject.is_active ? "Desactivar" : "Activar"}
                   </Button>
@@ -223,6 +230,7 @@ export default function Subjects() {
                       className="bg-red-50 px-3 text-red-600 hover:bg-red-100"
                       onClick={() => setConfirmDelete(subject)}
                       type="button"
+                      disabled={busyToggleId !== null || busyDelete}
                       aria-label={`Eliminar ${subject.name}`}
                     >
                       <Trash2 size={16} />
@@ -287,10 +295,10 @@ export default function Subjects() {
                 </Field>
               </div>
               <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <Button variant="secondary" type="button" onClick={closeModal} disabled={busy}>
+                <Button variant="secondary" type="button" onClick={closeModal} disabled={busyForm}>
                   Cancelar
                 </Button>
-                <Button type="submit" loading={busy}>
+                <Button type="submit" loading={busyForm}>
                   <Check size={17} /> Guardar
                 </Button>
               </div>
@@ -303,7 +311,7 @@ export default function Subjects() {
         open={!!confirmDelete}
         title="Eliminar materia"
         confirmLabel="Eliminar"
-        busy={busy}
+        busy={busyDelete}
         onClose={() => setConfirmDelete(null)}
         onConfirm={removeSubject}
       >

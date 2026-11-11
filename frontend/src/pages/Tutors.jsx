@@ -19,18 +19,24 @@ export default function Tutors() {
   const available = params.get("available") === "1";
 
   useEffect(() => {
-    api("/api/subjects").then((d) => setSubjects(d.subjects));
+    const controller = new AbortController();
+    api("/api/subjects", { signal: controller.signal })
+      .then((d) => { if (!controller.signal.aborted) setSubjects(d.subjects); })
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
     setLoading(true);
+    const controller = new AbortController();
     const qs = new URLSearchParams();
     if (subjectId) qs.set("subjectId", subjectId);
     if (available) qs.set("available", "1");
-    api(`/api/tutors?${qs.toString()}`)
-      .then((d) => { setTutors(d.tutors); setError(""); })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    api(`/api/tutors?${qs.toString()}`, { signal: controller.signal })
+      .then((d) => { if (!controller.signal.aborted) { setTutors(d.tutors); setError(""); } })
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [subjectId, available]);
 
   function updateFilter(next) {

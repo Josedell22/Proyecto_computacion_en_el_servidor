@@ -15,14 +15,16 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     Promise.all([
-      api("/api/requests"),
-      api("/api/requests?scope=received"),
-      api("/api/sessions"),
-      api("/api/publications"),
+      api("/api/requests", { signal: controller.signal }),
+      api("/api/requests?scope=received", { signal: controller.signal }),
+      api("/api/sessions", { signal: controller.signal }),
+      api("/api/publications", { signal: controller.signal }),
     ])
       .then(([sent, received, sessions, pubs]) => {
+        if (controller.signal.aborted) return;
         setStats({
           sent: sent.requests.length,
           received: received.requests.length,
@@ -31,8 +33,9 @@ export default function Dashboard() {
         });
         setError("");
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   if (loading) return <BrandLoader variant="page" message="Cargando panel..." />;

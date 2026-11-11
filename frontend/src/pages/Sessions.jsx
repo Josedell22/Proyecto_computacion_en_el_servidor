@@ -150,7 +150,7 @@ export default function Sessions() {
                             rows={3}
                           />
                         </Field>
-                        <p className="mt-1 text-right text-xs text-slate-400">{rating[session.id]?.comment?.length || 0}/800</p>
+                        <p className="mt-1 text-right text-xs text-slate-600">{rating[session.id]?.comment?.length || 0}/800</p>
                         <Button className="mt-3" type="submit" loading={busy === session.id}>
                           {busy === session.id ? "Enviando..." : "Enviar valoración"}
                         </Button>

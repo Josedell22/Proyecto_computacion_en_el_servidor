@@ -21,10 +21,14 @@ export default function Profile() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingSubjects, setSavingSubjects] = useState(false);
 
-  async function load() {
+  async function load(signal) {
     setLoading(true);
     try {
-      const [profile, catalog] = await Promise.all([api("/api/profile"), api("/api/subjects")]);
+      const [profile, catalog] = await Promise.all([
+        api("/api/profile", { signal }),
+        api("/api/subjects", { signal }),
+      ]);
+      if (signal?.aborted) return;
       setData(profile);
       setForm({
         name: profile.user.name || "",
@@ -36,14 +40,16 @@ export default function Profile() {
       setSubjects(catalog.subjects);
       setError("");
     } catch (err) {
-      setError(err.message);
+      if (!signal?.aborted) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
   }, []);
 
   async function saveProfile(e) {

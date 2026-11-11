@@ -45,45 +45,36 @@ export default function Register() {
         {error && <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>}
         <div className="space-y-5">
           <Field label="Nombre completo" htmlFor="register-name">
-            <div className="relative">
-              <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input
-                id="register-name"
-                className="pl-10"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </div>
+            <Input
+              id="register-name"
+              startIcon={<UserRound size={18} />}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
           </Field>
           <Field label="Correo electrónico" htmlFor="register-email" error={emailError}>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input
-                id="register-email"
-                className={`pl-10 ${emailError ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" : ""}`}
-                type="email"
-                placeholder="nombre@ejemplo.com"
-                value={form.email}
-                onChange={(e) => { setForm({ ...form, email: e.target.value }); setEmailError(""); }}
-                required
-              />
-            </div>
+            <Input
+              id="register-email"
+              className={emailError ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" : ""}
+              type="email"
+              startIcon={<Mail size={18} />}
+              placeholder="nombre@ejemplo.com"
+              value={form.email}
+              onChange={(e) => { setForm({ ...form, email: e.target.value }); setEmailError(""); }}
+              required
+            />
           </Field>
-          <Field label="Contraseña" htmlFor="register-password">
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input
-                id="register-password"
-                className="pl-10"
-                type="password"
-                placeholder="Mínimo 8 caracteres"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-              />
-            </div>
-            <p className="mt-2 text-xs text-slate-500">Usa al menos 8 caracteres, una letra y un número.</p>
+          <Field label="Contraseña" htmlFor="register-password" hint="Usa al menos 8 caracteres, una letra y un número.">
+            <Input
+              id="register-password"
+              type="password"
+              startIcon={<Lock size={18} />}
+              placeholder="Mínimo 8 caracteres"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
           </Field>
         </div>
         <Button type="submit" className="mt-7 w-full" loading={busy}>

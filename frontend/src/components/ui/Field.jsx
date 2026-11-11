@@ -1,15 +1,18 @@
 import React, { useId } from "react";
 
-export default function Field({ label, children, error, htmlFor, className = "" }) {
+export default function Field({ label, children, hint, error, htmlFor, className = "" }) {
   const generatedId = useId();
   const id = htmlFor || generatedId;
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
 
   const child = React.Children.only(children);
+  const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(" ") || undefined;
+
   const control = React.cloneElement(child, {
     id,
     "aria-invalid": Boolean(error),
-    "aria-describedby": error ? errorId : undefined,
+    "aria-describedby": describedBy,
   });
 
   return (
@@ -20,6 +23,11 @@ export default function Field({ label, children, error, htmlFor, className = "" 
         </label>
       )}
       {control}
+      {hint && (
+        <p id={hintId} className="text-xs text-slate-500">
+          {hint}
+        </p>
+      )}
       {error && (
         <p id={errorId} className="text-sm text-red-600">
           {error}

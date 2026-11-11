@@ -24,25 +24,29 @@ export default function Publications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function load(term = q, subject = subjectId) {
+  async function load(term = q, subject = subjectId, signal) {
     setLoading(true);
     setError("");
     try {
       const qs = new URLSearchParams();
       if (term) qs.set("q", term);
       if (subject) qs.set("subjectId", subject);
-      const data = await api(`/api/publications?${qs.toString()}`);
-      setItems(data.publications);
+      const data = await api(`/api/publications?${qs.toString()}`, { signal });
+      if (!signal?.aborted) setItems(data.publications);
     } catch (err) {
-      setError(err.message);
+      if (!signal?.aborted) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }
 
   useEffect(() => {
-    api("/api/subjects").then((d) => setSubjects(d.subjects));
-    load("", "");
+    const controller = new AbortController();
+    api("/api/subjects", { signal: controller.signal })
+      .then((d) => { if (!controller.signal.aborted) setSubjects(d.subjects); })
+      .catch(() => {});
+    load("", "", controller.signal);
+    return () => controller.abort();
   }, []);
 
   const subjectOptions = [

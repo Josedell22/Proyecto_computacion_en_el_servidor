@@ -22,7 +22,7 @@ export default function Layout() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between gap-3">
             <NavLink className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-white" to="/" onClick={() => setMenuOpen(false)}>
-              <BrandLogo className="h-8 w-8" ariaLabel="StudyMatch" /><span>StudyMatch</span>
+              <BrandLogo className="h-8 w-8" ariaLabel="" /><span>StudyMatch</span>
             </NavLink>
             <div className="flex min-w-0 items-center gap-3">
               <span className="hidden max-w-52 truncate text-sm text-slate-300 sm:block">{user?.name}</span>
